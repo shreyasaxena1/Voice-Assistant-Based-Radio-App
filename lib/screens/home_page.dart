@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:radio_app/components/ai_colors.dart';
@@ -12,18 +13,33 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   List<MyRadio> radios;
+  MyRadio _selectedRadio;
+  Color _selectedColor;
+  bool _isPlaying = false;
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     fetchRadio();
+    _audioPlayer.onPlayerStateChanged.listen((event) {
+    });
   }
 
   fetchRadio() async {
     final radioJson = await rootBundle.loadString("assets/radio.json");
     radios = MyRadioList.fromJson(radioJson).radios;
     print(radios);
+    setState(() {});
+  }
+
+  _playMusic(String url) {
+    _audioPlayer.play(url);
+    _selectedRadio = radios.firstWhere((element) => element.url == url);
+    print(_selectedRadio.name);
+    //refresh UI
     setState(() {});
   }
 
