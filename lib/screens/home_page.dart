@@ -53,7 +53,48 @@ class _HomePageState extends State<HomePage> {
               itemBuilder: (context, index) {
                 final rad = radios[index];
 
-                return VxBox(child: ZStack([]))
+                return VxBox(
+                        child: ZStack(
+                  [
+                    Positioned(
+                        top: 0.0,
+                        right: 0.0,
+                        child: VxBox(
+                          child: rad.category.text.white.make().px16(),
+                        )
+                            .height(40)
+                            .black
+                            .alignCenter
+                            .withRounded(value: 6)
+                            .make()),
+                    Align(
+                      //for radio name
+                      alignment: Alignment.bottomCenter,
+                      child: VStack(
+                        [
+                          rad.name.text.xl3.white.bold.make(),
+                          5.heightBox,
+                          rad.tagline.text.sm.white.semiBold.make(),
+                        ],
+                        crossAlignment: CrossAxisAlignment.center,
+                      ),
+                    ),
+                    Align(
+                      child: VStack(
+                        [
+                          Icon(
+                            CupertinoIcons.play_circle,
+                            color: Colors.white,
+                          ),
+                          5.heightBox,
+                          "Double Tap to play".text.gray300.make(),
+                        ],
+                        crossAlignment: CrossAxisAlignment.center,
+                      ),
+                    ),
+                  ],
+                ))
+                    .clip(Clip.antiAlias)
                     .bgImage(DecorationImage(
                         image: NetworkImage(rad.image),
                         fit: BoxFit.cover,
@@ -62,9 +103,17 @@ class _HomePageState extends State<HomePage> {
                     .border(color: Colors.black, width: 4.0)
                     .withRounded(value: 60.0)
                     .make()
-                    .p16()
-                    .centered();
-              })
+                    .onInkDoubleTap(() {})
+                    .p16();
+              }).centered(),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Icon(
+              CupertinoIcons.stop_circle,
+              color: Colors.white,
+              size: 50.0,
+            ),
+          ).pOnly(bottom: context.percentHeight * 12)
         ],
         fit: StackFit.expand,
       ),
