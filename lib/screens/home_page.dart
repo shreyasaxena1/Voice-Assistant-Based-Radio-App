@@ -5,6 +5,7 @@ import 'package:radio_app/components/ai_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:radio_app/model/radio.dart';
 import 'package:velocity_x/velocity_x.dart';
+import 'package:alan_voice/alan_voice.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -15,7 +16,7 @@ class _HomePageState extends State<HomePage> {
   List<MyRadio> radios;
   MyRadio _selectedRadio;
   Color _selectedColor;
-  bool _isPlaying = false;
+   bool _isPlaying = false;
 
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -23,6 +24,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     // TODO: implement initState
     super.initState();
+    setupAlan();
     fetchRadio();
     //Listener - Keep checking if music is playing or not
     _audioPlayer.onPlayerStateChanged.listen((event) {
@@ -34,7 +36,11 @@ class _HomePageState extends State<HomePage> {
       setState(() {});
     });
   }
-
+  setupAlan(){
+    AlanVoice.addButton(
+        "6b2f51f27ee2691d9de57b39130299c42e956eca572e1d8b807a3e2338fdd0dc/stage",
+        buttonAlign: AlanVoice.BUTTON_ALIGN_LEFT);
+  }
   fetchRadio() async {
     final radioJson = await rootBundle.loadString("assets/radio.json");
     radios = MyRadioList.fromJson(radioJson).radios;
@@ -42,7 +48,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
   }
 
-  _playMusic(String url) async{
+  _playMusic(String url) async {
     await _audioPlayer.play(url);
     _selectedRadio = radios.firstWhere((element) => element.url == url);
     print(_selectedRadio.name);
@@ -60,7 +66,7 @@ class _HomePageState extends State<HomePage> {
               .size(context.screenWidth, context.screenHeight)
               .withGradient(LinearGradient(colors: [
                 AIcolors.primaryColor1,
-                _selectedColor ?? AIcolors.primaryColor2
+                _selectedColor ?? AIcolors.primaryColor2,
               ], begin: Alignment.topLeft, end: Alignment.bottomRight))
               .make(),
           AppBar(
