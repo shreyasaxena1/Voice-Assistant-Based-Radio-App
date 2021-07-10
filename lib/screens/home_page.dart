@@ -16,17 +16,16 @@ class _HomePageState extends State<HomePage> {
   List<MyRadio> radios;
   MyRadio _selectedRadio;
   Color _selectedColor;
-   bool _isPlaying = false;
+  bool _isPlaying = false;
 
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     setupAlan();
-    fetchRadio();
-    //Listener - Keep checking if music is playing or not
+    fetchRadios();
+
     _audioPlayer.onPlayerStateChanged.listen((event) {
       if (event == PlayerState.PLAYING) {
         _isPlaying = true;
@@ -36,51 +35,145 @@ class _HomePageState extends State<HomePage> {
       setState(() {});
     });
   }
-  setupAlan(){
+
+  setupAlan() {
     AlanVoice.addButton(
         "6b2f51f27ee2691d9de57b39130299c42e956eca572e1d8b807a3e2338fdd0dc/stage",
-        buttonAlign: AlanVoice.BUTTON_ALIGN_LEFT);
+        buttonAlign: AlanVoice.BUTTON_ALIGN_RIGHT);
+    AlanVoice.callbacks.add((command) => _handleCommand(command.data));
   }
-  fetchRadio() async {
+
+  _handleCommand(Map<String, dynamic> response) {
+    switch (response["command"]) {
+      case "play":
+        _playMusic(_selectedRadio.url);
+        break;
+
+      case "play_channel":
+        final id = response["id"];
+        // _audioPlayer.pause();
+        MyRadio newRadio = radios.firstWhere((element) => element.id == id);
+        radios.remove(newRadio);
+        radios.insert(0, newRadio);
+        _playMusic(newRadio.url);
+        break;
+
+      case "stop":
+        _audioPlayer.stop();
+        break;
+      case "next":
+        final index = _selectedRadio.id;
+        MyRadio newRadio;
+        if (index + 1 > radios.length) {
+          newRadio = radios.firstWhere((element) => element.id == 1);
+          radios.remove(newRadio);
+          radios.insert(0, newRadio);
+        } else {
+          newRadio = radios.firstWhere((element) => element.id == index + 1);
+          radios.remove(newRadio);
+          radios.insert(0, newRadio);
+        }
+        _playMusic(newRadio.url);
+        break;
+
+      case "prev":
+        final index = _selectedRadio.id;
+        MyRadio newRadio;
+        if (index - 1 <= 0) {
+          newRadio = radios.firstWhere((element) => element.id == 1);
+          radios.remove(newRadio);
+          radios.insert(0, newRadio);
+        } else {
+          newRadio = radios.firstWhere((element) => element.id == index - 1);
+          radios.remove(newRadio);
+          radios.insert(0, newRadio);
+        }
+        _playMusic(newRadio.url);
+        break;
+      default:
+        print("Command was ${response["command"]}");
+        break;
+    }
+  }
+
+  fetchRadios() async {
     final radioJson = await rootBundle.loadString("assets/radio.json");
     radios = MyRadioList.fromJson(radioJson).radios;
+    _selectedRadio = radios[0];
+    _selectedColor = Color(int.tryParse(_selectedRadio.color));
     print(radios);
     setState(() {});
   }
 
-  _playMusic(String url) async {
-    await _audioPlayer.play(url);
+  _playMusic(String url) {
+    _audioPlayer.play(url);
     _selectedRadio = radios.firstWhere((element) => element.url == url);
     print(_selectedRadio.name);
-    //refresh UI
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: Drawer(),
+      drawer: Drawer(
+        child: Container(
+          color: _selectedColor ?? AIcolors.primaryColor2,
+          child: radios != null
+              ? [
+                  100.heightBox,
+                  "All Channels".text.xl.white.semiBold.make().px16(),
+                  20.heightBox,
+                  ListView(
+                    padding: Vx.m0,
+                    shrinkWrap: true,
+                    children: radios
+                        .map((e) => ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage: NetworkImage(e.icon),
+                              ),
+                              title: "${e.name} FM".text.white.make(),
+                              subtitle: e.tagline.text.white.make(),
+                            ))
+                        .toList(),
+                  ).expand()
+                ].vStack(crossAlignment: CrossAxisAlignment.start)
+              : const Offstage(),
+        ),
+      ),
       body: Stack(
         children: [
           VxAnimatedBox()
               .size(context.screenWidth, context.screenHeight)
-              .withGradient(LinearGradient(colors: [
-                AIcolors.primaryColor1,
-                _selectedColor ?? AIcolors.primaryColor2,
-              ], begin: Alignment.topLeft, end: Alignment.bottomRight))
+              .withGradient(
+                LinearGradient(
+                  colors: [
+                    AIcolors.primaryColor2,
+                    _selectedColor ?? AIcolors.primaryColor1,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              )
               .make(),
-          AppBar(
-            title: "Radiofy".text.xl4.bold.white.make().shimmer(),
-            backgroundColor: Colors.transparent,
-            elevation: 0.0,
-            centerTitle: true,
-          ).h(100.0).p16(),
+          [
+            AppBar(
+              title: "Radiofy".text.xl4.bold.white.make().shimmer(
+                  primaryColor: AIcolors.primaryColor2,
+                  secondaryColor: Colors.white),
+              backgroundColor: Colors.transparent,
+              elevation: 0.0,
+              centerTitle: true,
+            ).h(100.0).p16(),
+            10.heightBox,
+          ].vStack(alignment: MainAxisAlignment.start),
+          30.heightBox,
           radios != null
               ? VxSwiper.builder(
                   itemCount: radios.length,
                   aspectRatio: 1.0,
                   enlargeCenterPage: true,
                   onPageChanged: (index) {
+                    _selectedRadio = radios[index];
                     final colorHex = radios[index].color;
                     _selectedColor = Color(int.tryParse(colorHex));
                     setState(() {});
@@ -92,18 +185,19 @@ class _HomePageState extends State<HomePage> {
                             child: ZStack(
                       [
                         Positioned(
-                            top: 0.0,
-                            right: 0.0,
-                            child: VxBox(
-                              child: rad.category.text.white.make().px16(),
-                            )
-                                .height(40)
-                                .black
-                                .alignCenter
-                                .withRounded(value: 6)
-                                .make()),
+                          top: 0.0,
+                          right: 0.0,
+                          child: VxBox(
+                            child:
+                                rad.category.text.uppercase.white.make().px16(),
+                          )
+                              .height(40)
+                              .black
+                              .alignCenter
+                              .withRounded(value: 10.0)
+                              .make(),
+                        ),
                         Align(
-                          //for radio name
                           alignment: Alignment.bottomCenter,
                           child: VStack(
                             [
@@ -115,38 +209,39 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         Align(
-                          child: VStack(
-                            [
+                            alignment: Alignment.center,
+                            child: [
                               Icon(
                                 CupertinoIcons.play_circle,
                                 color: Colors.white,
                               ),
-                              5.heightBox,
-                              "Double Tap to play".text.gray300.make(),
-                            ],
-                            crossAlignment: CrossAxisAlignment.center,
-                          ),
-                        ),
+                              10.heightBox,
+                              "Double tap to play".text.gray300.make(),
+                            ].vStack())
                       ],
                     ))
                         .clip(Clip.antiAlias)
-                        .bgImage(DecorationImage(
-                            image: NetworkImage(rad.image),
-                            fit: BoxFit.cover,
-                            colorFilter: ColorFilter.mode(
-                                Colors.black.withOpacity(0.3),
-                                BlendMode.darken)))
-                        .border(color: Colors.black, width: 4.0)
+                        .bgImage(
+                          DecorationImage(
+                              image: NetworkImage(rad.image),
+                              fit: BoxFit.cover,
+                              colorFilter: ColorFilter.mode(
+                                  Colors.black.withOpacity(0.3),
+                                  BlendMode.darken)),
+                        )
+                        .border(color: Colors.black, width: 5.0)
                         .withRounded(value: 60.0)
                         .make()
                         .onInkDoubleTap(() {
                       _playMusic(rad.url);
                     }).p16();
-                  }).centered()
+                  },
+                ).centered()
               : Center(
                   child: CircularProgressIndicator(
-                  backgroundColor: Colors.white,
-                )),
+                    backgroundColor: Colors.white,
+                  ),
+                ),
           Align(
             alignment: Alignment.bottomCenter,
             child: [
@@ -172,6 +267,7 @@ class _HomePageState extends State<HomePage> {
           ).pOnly(bottom: context.percentHeight * 12)
         ],
         fit: StackFit.expand,
+        clipBehavior: Clip.antiAlias,
       ),
     );
   }
